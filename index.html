@@ -121,6 +121,7 @@
   /* Konfetti canvas */
   #konfetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 998; }
 
+
   .hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 1.25rem; }
   .ach-tæller {
     display: inline-flex; align-items: center; gap: 6px;
@@ -161,6 +162,7 @@
 <body>
 
 <canvas id="konfetti-canvas"></canvas>
+
 
 <div id="achievement">
   <div class="achievement-box">
@@ -208,7 +210,7 @@ const vejrTyper = [
   { ikon:"🎪", label:"Festligt lejrvejr",            beskrivelse:"Som om vejrguderne vidste at der er Landslejr. Varm, lys og glad – præcis det vejr man drømmer om når man pakker tasken i juni.", badges:["Perfekt til fest","Intet at klage over","Lejrchef tilfreds"] },
   { ikon:"🌙", label:"Stille og lun aften",          beskrivelse:"Natten falder stille over lejren. Ingen vind, ingen skyer – bare en varm mørkeblå himmel fuld af stjerner over jeres telte.", badges:["Stjernekiggeri","Ingen regn","Perfekt sovevejr"] },
   { ikon:"🍦", label:"Is-og-solskin-dag",            beskrivelse:"Det er præcis varmt nok til at is er nødvendigt, men ikke varmere end at man kan holde den uden den smelter øjeblikkeligt. Guldtemperatur.", badges:["22–25 grader","Is på menu","Ingen klager"] },
-  { ikon:"🎶", label:"Sange-i-det-fri-vejr",         beskrivelse:"Det er den slags vejr hvor alle spontant begynder at synge. Solen varmer, brisen bærer melodierne og alt er godt.", badges:["Perfekt akustik","God stemning","Guitaren frem"] },
+  { ikon:"🎤", label:"Sang under åben himmel",         beskrivelse:"Det er den slags vejr hvor alle spontant begynder at synge. Solen varmer, brisen bærer melodierne og alt er godt.", badges:["Perfekt akustik","God stemning","Guitaren frem"] },
   { ikon:"🏕️", label:"Teltlivsvejr",                beskrivelse:"Ikke for varmt til at sove, ikke for koldt til at sidde ude. Vejret er som designet specielt til at leve i telt i ti dage.", badges:["Perfekt til lejr","God nattesøvn","Ingen kondensation"] },
   { ikon:"🌸", label:"Blomstrende sommerdag",        beskrivelse:"Engen omkring lejren er i fuldt flor og dufter af sommer. Bien summer, fuglene synger og der er solskin nok til alle.", badges:["Naturskønt","Let duft af blomster","Næsen glad"] },
   { ikon:"🧭", label:"Perfekt til orienteringsløb",  beskrivelse:"Overskyet nok til at solen ikke blænder, men lyst og godt vejr. Kortet kan ses tydeligt og benene løber af sig selv.", badges:["Diffust lys","Kølig og frisk","God til sport"] },
@@ -237,7 +239,7 @@ const ikonAchievements = {
   "🎪": [{ ikon:"🎺", titel:"Festudråber!", tekst:"Tre festlige lejrdage! Fanfarer! Paraden går nu. Du er ceremonimester for hele Landslejren." }],
   "🌙": [{ ikon:"🦉", titel:"Uglen!", tekst:"Tre stille, lune aftener. Du hører uglen i skoven mens alle andre sover. Du ved noget de ikke ved." }],
   "🍦": [{ ikon:"🍧", titel:"Is-sommelier!", tekst:"Tre is-og-solskin-dage! Du er lejrens ubestridte ekspert i vejr og dessert. En sjælden kombination." }],
-  "🎶": [{ ikon:"🎸", titel:"Lejrsangs-legenden!", tekst:"Tre dage til sange i det fri! Din stemme bærer over engen. Guitaren er stemt. Alle er klar." }],
+  "🎤": [{ ikon:"🎤", titel:"Lejrsangs-legenden!", tekst:"Tre dage hvor vejret selv synger. Brisen bærer melodierne over lejrpladsen og solen varmer stemmebåndene. Alle synger med – om de vil eller ej." }],
   "🏕️": [{ ikon:"⛺", titel:"Teltlivs-guru!", tekst:"Tre perfekte teltlivsdage! Du sover som en sten, vågner frisk og er teltets ubestridte mester." }],
   "🌸": [{ ikon:"💐", titel:"Blomstersamler!", tekst:"Tre blomstrende sommerdage! Engen dufter, bien summer og du har samlet dagenes smukkeste buket." }],
   "🧭": [{ ikon:"🏃", titel:"Orienteringsløbs-champion!", tekst:"Tre perfekte orienteringsdage! Du finder vej i blinde. DMIs kort er intet mod dit indre kompas." }],
@@ -275,8 +277,13 @@ let spilAktiv = false;
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
 function genererVejr() {
-  const shuffled = [...vejrTyper].sort(() => Math.random() - 0.5);
-  const pulje = shuffled.slice(0, 8);
+  const rick = vejrTyper.find(v => v.ikon === "🎤");
+  const rickFundet = fundneAch.includes("Lejrsangs-legenden!");
+  const resten = [...vejrTyper].filter(v => v.ikon !== "🎤").sort(() => Math.random() - 0.5);
+  // Inkluder 🎤 med forhøjet sandsynlighed (2 pladser) medmindre den allerede er fundet
+  const pulje = rickFundet
+    ? resten.slice(0, 8)
+    : [rick, rick, ...resten.slice(0, 6)];
   dagData = dageNavn.map(navn => ({
     navn,
     vejr: pulje[Math.floor(Math.random() * pulje.length)],
@@ -348,6 +355,9 @@ function klikDag(i) {
       spilValgte.push(i);
       renderGrid();
       if (spilValgte.length === 3) {
+        // Start lyd direkte i klik-event (browsere kræver det)
+        const tjekIkon = dagData[spilValgte[0]].vejr.ikon;
+        if (tjekIkon === "🎤") spillRick();
         setTimeout(visAchievement, 400);
       }
       return;
@@ -523,6 +533,11 @@ function startKonfetti(niveau) {
 function stopKonfetti() {
   if (animId) cancelAnimationFrame(animId);
   ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function spillRick() {
+  if (fundneAch.includes("Lejrsangs-legenden!")) return;
+  window.open("https://www.youtube.com/watch?v=xvFZjo5PgG0", "_blank");
 }
 
 let fdfKliks = 0;
