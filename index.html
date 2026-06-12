@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Det gode Landslejrvejr</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sky: #5BA8E0; --sky-light: #EAF4FC;
+    --sun: #F5A623; --sun-dark: #C47D0A;
+    --green: #4A9B6F; --green-light: #E8F5EE;
+    --text: #1A2B3C; --text-muted: #5A7080;
+    --card-bg: rgba(255,255,255,0.85);
+    --card-border: rgba(91,168,224,0.25);
+    --radius: 16px; --radius-sm: 10px;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(160deg, #C8E8F7 0%, #E8F5EE 50%, #FFF8E7 100%);
+    min-height: 100vh; color: var(--text); padding: 2rem 1rem 4rem;
+  }
+  header { text-align: center; margin-bottom: 2rem; }
+  .sted-badge {
+    display: inline-block; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--sky);
+    background: rgba(91,168,224,0.12); border-radius: 99px;
+    padding: 4px 14px; margin-bottom: 0.75rem;
+  }
+  h1 { font-size: clamp(26px,5vw,42px); font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 0.4rem; }
+  h1 span { color: var(--sun-dark); }
+  .undertitel { font-size: 15px; color: var(--text-muted); margin-bottom: 1.5rem; }
+  #gen-btn {
+    background: var(--sun); color: #fff; font-size: 15px; font-weight: 600;
+    border: none; border-radius: 99px; padding: 0.65rem 1.75rem; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    box-shadow: 0 2px 12px rgba(245,166,35,0.35);
+  }
+  #gen-btn:hover { background: var(--sun-dark); transform: translateY(-1px); }
+  #gen-btn:active { transform: scale(0.97); }
+
+  #detail-panel {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    margin: 1.5rem auto; max-width: 680px; display: none;
+    backdrop-filter: blur(6px); animation: slideDown 0.2s ease;
+  }
+  #detail-panel.aktiv { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .detail-top { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
+  .detail-ikon { font-size: 44px; line-height: 1; }
+  .detail-titel { font-size: 19px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .detail-temp { font-size: 14px; color: var(--text-muted); }
+  .detail-tekst { font-size: 15px; color: var(--text-muted); line-height: 1.7; margin-bottom: 0.75rem; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .badge {
+    font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px;
+    background: var(--sky-light); color: var(--sky); border: 1px solid rgba(91,168,224,0.25);
+  }
+  .luk-btn { background: none; border: none; font-size: 13px; color: var(--text-muted); cursor: pointer; padding: 0; }
+  .luk-btn:hover { color: var(--text); }
+
+  .dag-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px; max-width: 900px; margin: 0 auto;
+  }
+  .dag-kort {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 1rem 0.75rem; text-align: center;
+    cursor: pointer; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    backdrop-filter: blur(4px); position: relative;
+  }
+  .dag-kort:hover { transform: translateY(-3px); border-color: var(--sky); box-shadow: 0 6px 20px rgba(91,168,224,0.2); }
+  .dag-kort:active { transform: scale(0.97); }
+  .dag-kort.valgt { border-color: var(--sun); box-shadow: 0 6px 20px rgba(245,166,35,0.25); }
+
+  /* Hemmelig spil-styling */
+  .dag-kort.spil-valgt {
+    border-color: var(--sun) !important;
+    background: rgba(255,248,225,0.97) !important;
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.5) !important;
+    transform: translateY(-2px);
+  }
+  .dag-kort.spil-valgt .dag-ikon { animation: bounce 0.4s ease; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-8px); } }
+
+  .spil-tæller {
+    display: none; text-align: center; margin: 1rem auto 0;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .spil-tæller.vis { display: block; }
+  .spil-prik { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ddd; margin: 0 3px; transition: background 0.2s; }
+  .spil-prik.aktiv { background: var(--sun); }
+
+  /* Achievement overlay */
+  #achievement {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(20,40,60,0.6); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  #achievement.vis { display: flex; }
+  .achievement-box {
+    background: #fff; border-radius: 24px; padding: 2.5rem 2rem;
+    text-align: center; max-width: 360px; width: 90%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+    animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform: scale(1); } }
+  .achievement-ikon { font-size: 64px; margin-bottom: 0.5rem; line-height: 1; }
+  .achievement-titel { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+  .achievement-tekst { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.25rem; }
+  .achievement-luk {
+    background: var(--sun); color: #fff; border: none; border-radius: 99px;
+    font-size: 15px; font-weight: 600; padding: 0.6rem 1.75rem; cursor: pointer;
+  }
+  .achievement-luk:hover { background: var(--sun-dark); }
+
+  /* Konfetti canvas */
+  #konfetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 998; }
+
+  .hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 1.25rem; }
+  .ach-tæller {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(91,168,224,0.2);
+    border-radius: 99px; padding: 3px 10px 3px 8px;
+    margin-top: 0.75rem; cursor: default;
+    transition: opacity 0.3s;
+  }
+  .ach-tæller-ikon { font-size: 13px; }
+  .ach-tæller.ny { animation: achPop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes achPop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+  footer { text-align: center; margin-top: 3rem; font-size: 12px; color: var(--text-muted); opacity: 0.7; }
+  #fdf-reset {
+    background: none; border: none; cursor: pointer;
+    font-size: inherit; color: inherit; padding: 0;
+    font-family: inherit; opacity: 0.5;
+    transition: opacity 0.2s, letter-spacing 0.3s;
+  }
+  #fdf-reset:hover { opacity: 1; letter-spacing: 0.06em; }
+  #fdf-reset.aktiveret { color: #e05050; opacity: 1; }
+  #reset-confirm {
+    display: none; font-size: 11px; color: #e05050;
+    margin-top: 4px; cursor: pointer;
+  }
+  #reset-confirm.vis { display: block; }
+  @media (max-width: 500px) {
+    .dag-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+    .dag-ikon { font-size: 28px; } .dag-temp { font-size: 18px; }
+  }
+  .dag-navn { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.03em; }
+  .dag-ikon { font-size: 34px; display: block; margin-bottom: 6px; }
+  .dag-vejr { font-size: 12px; color: var(--text-muted); line-height: 1.3; margin-bottom: 6px; min-height: 30px; }
+  .dag-temp { font-size: 22px; font-weight: 700; color: var(--text); }
+</style>
+</head>
+<body>
+
+<canvas id="konfetti-canvas"></canvas>
+
+<div id="achievement">
+  <div class="achievement-box">
+    <div class="achievement-ikon" id="ach-ikon"></div>
+    <div class="achievement-titel" id="ach-titel"></div>
+    <p class="achievement-tekst" id="ach-tekst"></p>
+    <button class="achievement-luk" onclick="lukAchievement()">Fedt! 🎉</button>
+  </div>
+</div>
+
+<header>
+  <div class="sted-badge">📍 Ry-området · FDF Landslejr 2025</div>
+  <h1>Det gode <span>Landslejrvejr</span></h1>
+  <p class="undertitel">8–19 juli · Vejrudsigt med 100% solgaranti</p>
+  <button id="gen-btn" onclick="genererVejr()">✨ Generér ny udsigt</button>
+  <div><span class="ach-tæller" id="ach-tæller" title="Fundne achievements"><span class="ach-tæller-ikon">🏅</span><span id="ach-antal">0</span></span></div>
+</header>
+
+<div id="detail-panel"></div>
+<div class="dag-grid" id="dag-grid"></div>
+<div class="spil-tæller" id="spil-tæller"></div>
+<p class="hint">Klik på en dag for at se dagens vejrbeskrivelse</p>
+<footer>
+  Det gode Landslejrvejr · <button id="fdf-reset" onclick="fdfKlik()">FDF</button> · Regnvejr er ikke en option
+  <div id="reset-confirm" onclick="resetAchievements()">↺ Nulstil achievements?</div>
+</footer>
+
+<script>
+const vejrTyper = [
+  { ikon:"☀️",  label:"Strålende solskin",          beskrivelse:"Himlen er fejlfrit blå og solen skinner fra morgen til aften. Det er den slags dag, der gør at alle husker Landslejren i årevis.", badges:["Ingen skyer overhovedet","Masser af vitamin D","Solcreme påkrævet"] },
+  { ikon:"🌤️", label:"Mest sol",                    beskrivelse:"Lette skyer triller forbi som gæster, der ikke vil forstyrre. Solen er tydeligt chefen i dag og giver perfekte vilkår til vandreture og stormbål.", badges:["Let brise","Ingen paraply","Perfekt til aktiviteter"] },
+  { ikon:"🌞", label:"Dejligt varmt",                beskrivelse:"En herlig sommerdag af den rare slags. Husk vand i flasken og find skyggen til middagshvilen – men klag ikke, I er på lejr!", badges:["Høj UV-indeks","Skygge anbefales","Is til dessert"] },
+  { ikon:"⛅", label:"Sol og skyer skiftes",         beskrivelse:"Solen og skyerne er nået til enighed om at dele dagen. Det giver en behagelig temperatur og dramatisk lys til fotoene.", badges:["Behagelig temperatur","Flotte skyer","Ingen regn"] },
+  { ikon:"🌈", label:"Regnbue-vejr",                 beskrivelse:"En enkelt sky dristede sig til at komme forbi, men solen slog hurtigt igen og sendte en regnbue over lejrpladsen. Næsten for smukt.", badges:["Dramatisk lys","Perfekt fotoøjeblik","Ingen regntøj nødvendigt"] },
+  { ikon:"🌬️", label:"Sol med frisk vind",          beskrivelse:"Solen skinner, men en frisk vestenvind sørger for at ingen sveder for meget. Dragen flyver af sig selv og teltene prøver at gøre det samme.", badges:["God til drager","Let jakke måske","Teltpløkker i top"] },
+  { ikon:"🌅", label:"Magisk aftenrøde",             beskrivelse:"Dagen har været fantastisk, og den slutter endnu bedre. Aftenhimlen skifter fra guld til rosa og alle stopper op og kigger.", badges:["Aftengløde","Perfekt til lejrbål","Smukt lys"] },
+  { ikon:"🌻", label:"Sommer i topform",             beskrivelse:"Varmt, vindstille og sommerligt – præcis som et postkort. Fuglene synger, blomsterne blomstrer og humøret er i absolut top.", badges:["Vindstille","Insekter aktive","Sommervibe 100%"] },
+  { ikon:"🏖️", label:"Næsten for godt",             beskrivelse:"Vejret er så godt at det næsten er uretfærdigt. Deltagerafgiften burde have inkluderet dette vejr som ekstra service.", badges:["Perfekt temperatur","Ingen klager","Husk solhat"] },
+  { ikon:"✨", label:"Krystalklart vejr",             beskrivelse:"Luften er så klar at man kan se Himmelbjerg fra den anden side af lejren. Horisonten er skarp og himlen er en dybblå drøm.", badges:["Perfekt sigt","Lav luftfugtighed","Smuk udsigt"] },
+  { ikon:"🌄", label:"Smuk solopgang",               beskrivelse:"De tidligste fugle i lejren blev belønnet med en solopgang i orange og lilla. Dagen lover godt – rigtig godt.", badges:["Tidlig morgenstemning","Værd at stå op til","Kaffe smager bedre"] },
+  { ikon:"🍃", label:"Sommerlig og lun",             beskrivelse:"En blid dag hvor en svag brise rusker i løvene. Ikke for varmt, ikke for køligt – bare præcis som det skal være på en god lejrdag.", badges:["Perfekt balance","Ingen svedige rygge","Alle er glade"] },
+  { ikon:"🌝", label:"Varm sommernat",               beskrivelse:"Solen er gået ned men varmen hænger stadig i luften. Aftenen er perfekt til at sidde ude under stjernerne med en varm kakao.", badges:["Stjerneklart","Ingen dug","Bliv oppe lidt længere"] },
+  { ikon:"🌊", label:"Frisk søbrise",                beskrivelse:"En kølig brise finder vej indover fra søerne og holder temperaturen på det helt rette niveau. Perfekt til de lange vandreture.", badges:["Kølig brise","God til march","Ingen overophedning"] },
+  { ikon:"🦋", label:"Sommerfuglevejr",              beskrivelse:"Solen skinner og vindstille gør at sommerfuglene danser over engen. Naturen er på sit absolut smukkeste i dag.", badges:["Vindstille","Insektliv","Naturoplevelse"] },
+  { ikon:"🎪", label:"Festligt lejrvejr",            beskrivelse:"Som om vejrguderne vidste at der er Landslejr. Varm, lys og glad – præcis det vejr man drømmer om når man pakker tasken i juni.", badges:["Perfekt til fest","Intet at klage over","Lejrchef tilfreds"] },
+  { ikon:"🌙", label:"Stille og lun aften",          beskrivelse:"Natten falder stille over lejren. Ingen vind, ingen skyer – bare en varm mørkeblå himmel fuld af stjerner over jeres telte.", badges:["Stjernekiggeri","Ingen regn","Perfekt sovevejr"] },
+  { ikon:"🍦", label:"Is-og-solskin-dag",            beskrivelse:"Det er præcis varmt nok til at is er nødvendigt, men ikke varmere end at man kan holde den uden den smelter øjeblikkeligt. Guldtemperatur.", badges:["22–25 grader","Is på menu","Ingen klager"] },
+  { ikon:"🎶", label:"Sange-i-det-fri-vejr",         beskrivelse:"Det er den slags vejr hvor alle spontant begynder at synge. Solen varmer, brisen bærer melodierne og alt er godt.", badges:["Perfekt akustik","God stemning","Guitaren frem"] },
+  { ikon:"🏕️", label:"Teltlivsvejr",                beskrivelse:"Ikke for varmt til at sove, ikke for koldt til at sidde ude. Vejret er som designet specielt til at leve i telt i ti dage.", badges:["Perfekt til lejr","God nattesøvn","Ingen kondensation"] },
+  { ikon:"🌸", label:"Blomstrende sommerdag",        beskrivelse:"Engen omkring lejren er i fuldt flor og dufter af sommer. Bien summer, fuglene synger og der er solskin nok til alle.", badges:["Naturskønt","Let duft af blomster","Næsen glad"] },
+  { ikon:"🧭", label:"Perfekt til orienteringsløb",  beskrivelse:"Overskyet nok til at solen ikke blænder, men lyst og godt vejr. Kortet kan ses tydeligt og benene løber af sig selv.", badges:["Diffust lys","Kølig og frisk","God til sport"] },
+  { ikon:"🪁", label:"God dragervind",               beskrivelse:"En stabil, behagelig vind fra sydvest – ikke for kraftig, ikke for svag. Enhver drage der ikke flyver i dag har kun sig selv at takke.", badges:["4–6 m/s","Stabil vindretning","Dragen op!"] },
+  { ikon:"🌾", label:"Gyldent sommerlys",            beskrivelse:"Et blødt, gyldent lys lægger sig over markerne hele dagen. Det ligner et maleri og alle ser godt ud på billederne.", badges:["Varmt lys","Fotografernes dag","Gyldent filter gratis"] },
+  { ikon:"🌿", label:"Frisk og grøn dag",            beskrivelse:"Regnen fra i forgårs fik skoven til at gløde i alle nuancer af grønt. I dag er det tørt, friskt og prægtigt derude.", badges:["Frisk luft","Grøn natur","God til skovtur"] }
+];
+
+// Ikon-specifikke achievements – nøgle er vejrikonet
+const ikonAchievements = {
+  "☀️":  [{ ikon:"👑",  titel:"Solkonge!", tekst:"Tre strålende solskindsdage! Himlen er din. Sol, sol og endnu mere sol – Landslejren er velsignet." }],
+  "🌤️": [{ ikon:"🕶️", titel:"Solbrille-ekspert!", tekst:"Tre dage med mest sol. Du ved præcis hvornår man skal have solbrillerne på. Og det er altid." }],
+  "🌞": [{ ikon:"🍦", titel:"Is-alert!", tekst:"Tre dejligt varme dage! Det er en ordre: is til hele lejren. Ingen undtagelser." }],
+  "⛅": [{ ikon:"📸", titel:"Skyernes fotograf!", tekst:"Tre dage med sol og skyer. Det dramatiske lys er perfekt – du har øje for det smukke i det ujævne." }],
+  "🌈": [{ ikon:"🌈", titel:"Regnbue-jæger!", tekst:"Tre regnbuedage! Det er statistisk nærmest umuligt. Men du fandt dem. Du er vejrets udkårne." }],
+  "🌬️": [{ ikon:"🪁", titel:"Drage-mester!", tekst:"Tre dage med frisk vind! Alle drage-entusiaster i lejren bukker sig i taknemmelighed." }],
+  "🌅": [{ ikon:"🔥", titel:"Bålvagt!", tekst:"Tre magiske aftenrøder. Det betyder tre perfekte lejrbålsaftener. Træet er hentet, ilden er tændt." }],
+  "🌻": [{ ikon:"😎", titel:"Sommervibe 100%!", tekst:"Tre dage hvor sommeren er i absolut topform. Fuglene synger, humøret er højt, du er uovervindelig." }],
+  "🏖️": [{ ikon:"🌴", titel:"Lejr-paradis!", tekst:"Tre dage der næsten er for gode. Deltagerafgiften burde have været det dobbelte for det her vejr." }],
+  "✨": [{ ikon:"🔭", titel:"Stjernekigger!", tekst:"Tre krystalklar dage! Luften er så ren at du kan se Himmelbjerg, Himmelbjerget og muligvis månen." }],
+  "🌄": [{ ikon:"🐓", titel:"Tidlig fugl!", tekst:"Tre smukke solopgange! Du er tydeligvis oppe før alle andre. Det er beundringsværdigt. Og lidt mærkeligt." }],
+  "🍃": [{ ikon:"🧘", titel:"Zen-mester!", tekst:"Tre sommerlige, lune dage. Ikke for varmt, ikke for koldt – du har fundet vejrets indre balance." }],
+  "🌝": [{ ikon:"🌟", titel:"Nattehimmel-ekspert!", tekst:"Tre varme sommernætter! Du sidder ude under stjernerne mens resten sover. Klogt valg." }],
+  "🌊": [{ ikon:"🚣", titel:"Søfareren!", tekst:"Tre dage med frisk søbrise! Kanosøen kalder. Padlerne er klar. Bølgerne venter." }],
+  "🦋": [{ ikon:"🌿", titel:"Naturvogter!", tekst:"Tre sommerfugledage! Engen blomstrer og du har beskyttet den med din opdagelse. Naturen takker." }],
+  "🎪": [{ ikon:"🎺", titel:"Festudråber!", tekst:"Tre festlige lejrdage! Fanfarer! Paraden går nu. Du er ceremonimester for hele Landslejren." }],
+  "🌙": [{ ikon:"🦉", titel:"Uglen!", tekst:"Tre stille, lune aftener. Du hører uglen i skoven mens alle andre sover. Du ved noget de ikke ved." }],
+  "🍦": [{ ikon:"🍧", titel:"Is-sommelier!", tekst:"Tre is-og-solskin-dage! Du er lejrens ubestridte ekspert i vejr og dessert. En sjælden kombination." }],
+  "🎶": [{ ikon:"🎸", titel:"Lejrsangs-legenden!", tekst:"Tre dage til sange i det fri! Din stemme bærer over engen. Guitaren er stemt. Alle er klar." }],
+  "🏕️": [{ ikon:"⛺", titel:"Teltlivs-guru!", tekst:"Tre perfekte teltlivsdage! Du sover som en sten, vågner frisk og er teltets ubestridte mester." }],
+  "🌸": [{ ikon:"💐", titel:"Blomstersamler!", tekst:"Tre blomstrende sommerdage! Engen dufter, bien summer og du har samlet dagenes smukkeste buket." }],
+  "🧭": [{ ikon:"🏃", titel:"Orienteringsløbs-champion!", tekst:"Tre perfekte orienteringsdage! Du finder vej i blinde. DMIs kort er intet mod dit indre kompas." }],
+  "🪁": [{ ikon:"💨", titel:"Vindmager!", tekst:"Tre gode dageervind! Din drage er den højeste på hele Landslejren og alle andre kigger misundeligt op." }],
+  "🌾": [{ ikon:"📷", titel:"Gyldent øjeblik!", tekst:"Tre dage med gyldent sommerlys! Alle dine fotos ser professionelt redigerede ud. Det er bare vejret." }],
+  "🌿": [{ ikon:"🌲", titel:"Skovens vogter!", tekst:"Tre friske, grønne dage! Skoven gløder efter regnen og du er den første til at opdage det. Smukt." }],
+};
+
+// Generelle achievements som bruges hvis ikonet ikke har et specifikt
+const generelleAchievements = [
+  { ikon:"🏆", titel:"Landslejr-mester!", tekst:"Tre identiske vejrdage fundet! Et tegn fra vejrguderne. Et godt tegn. Det bedste tegn faktisk." },
+  { ikon:"🎯", titel:"Præcisionsvejr!", tekst:"Tre ens? Det er ingen tilfældighed – du er i harmoni med naturens kræfter." },
+  { ikon:"🔮", titel:"Vejrprofet!", tekst:"Du har afsløret vejrets hemmelighed! Tre ens dage viser at Landslejren er velsignet fra oven." },
+  { ikon:"🦅", titel:"Ørne-øje!", tekst:"Du spottede tre ens dage som en FDF-spejder der finder spor i skoven. Imponerende. Meget imponerende." },
+  { ikon:"🧙", titel:"Vejrmager!", tekst:"Kun sande vejrmagere kan finde tre ens dage. Du har kraften. Brug den med omtanke." },
+  { ikon:"🍀", titel:"Firkløver-finder!", tekst:"Tre ens dage er sjældnere end et firkløver. Og du fandt dem! Du er simpelthen heldig." },
+  { ikon:"🚀", titel:"Vejr-astronaut!", tekst:"Du har opdaget et mønster i vejret som selv NASA ikke kendte til. Opsendelse om 3... 2... 1..." },
+  { ikon:"🦊", titel:"Ræven!", tekst:"Listig og skarp. Du slog vejrets tilfældighed og fandt tre ens. Ingen slipper udenom ræven." },
+  { ikon:"🎖️", titel:"Fortjenstmedalje!", tekst:"Hermed tildeles du FDFs hemmelige vejrmedalje for enestående indsats i vejrobservation. Æret være du." },
+  { ikon:"🦄", titel:"Enhjørning-udsigt!", tekst:"Tre ens vejrdage er lige så sjældne som en enhjørning. Og du red den! Tillykke, vejrrytter." },
+  { ikon:"⛵", titel:"Kaptajn Landslejr!", tekst:"Du har navigeret vejrudsigtens farvande og fundet skatten: tre ens dage. Hejs sejlet, kaptajn!" },
+  { ikon:"🎠", titel:"Karrusel-vinder!", tekst:"Rundtur efter rundtur indtil du fandt tre ens. Sejrens sødme smager bedst når man har kæmpet for den." },
+  { ikon:"🐬", titel:"Delfin-intuition!", tekst:"Delfiner navigerer med ultralyd. Du navigerer med ren intuition. Resultatet er det samme: tre ens dage!" },
+  { ikon:"🌺", titel:"Blomst-buketten!", tekst:"Tre ens dage er som tre blomster af samme slags. Du har samlet den smukkeste buket på hele Landslejren." },
+  { ikon:"🎩", titel:"Tryllekunstner!", tekst:"Abrakadabra! Tre ens dage er ikke magi – men det føles sådan. Du er dagens tryllekunstner." },
+];
+
+const dageNavn = ["Tirs 8/7","Ons 9/7","Tors 10/7","Fre 11/7","Lør 12/7","Søn 13/7","Man 14/7","Tirs 15/7","Ons 16/7","Tors 17/7","Fre 18/7","Lør 19/7"];
+
+let dagData = [];
+let valgtIdx = null;
+let spilValgte = [];
+let spilAktiv = false;
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function genererVejr() {
+  const shuffled = [...vejrTyper].sort(() => Math.random() - 0.5);
+  const pulje = shuffled.slice(0, 8);
+  dagData = dageNavn.map(navn => ({
+    navn,
+    vejr: pulje[Math.floor(Math.random() * pulje.length)],
+    temp: rand(21, 28)
+  }));
+  valgtIdx = null;
+  spilValgte = [];
+  spilAktiv = false;
+  document.getElementById("detail-panel").classList.remove("aktiv");
+  document.getElementById("spil-tæller").classList.remove("vis");
+
+  // Find om der findes mindst ét ikon med 3+ forekomster
+  const tæl = {};
+  dagData.forEach(d => { tæl[d.vejr.ikon] = (tæl[d.vejr.ikon] || 0) + 1; });
+  spilAktiv = Object.values(tæl).some(v => v >= 3);
+
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById("dag-grid");
+  grid.innerHTML = "";
+  dagData.forEach((dag, i) => {
+    const erSpilValgt = spilValgte.includes(i);
+    let cls = "dag-kort";
+    if (valgtIdx === i) cls += " valgt";
+    if (erSpilValgt) cls += " spil-valgt";
+
+    const kort = document.createElement("div");
+    kort.className = cls;
+    kort.innerHTML = `
+      <div class="dag-navn">${dag.navn}</div>
+      <span class="dag-ikon">${dag.vejr.ikon}</span>
+      <div class="dag-vejr">${dag.vejr.label}</div>
+      <div class="dag-temp">${dag.temp}°C</div>
+    `;
+    kort.addEventListener("click", () => klikDag(i));
+    grid.appendChild(kort);
+  });
+
+  // Opdater spil-tæller
+  if (spilValgte.length > 0) {
+    const tæller = document.getElementById("spil-tæller");
+    tæller.classList.add("vis");
+    const prikker = [0,1,2].map(n =>
+      `<span class="spil-prik ${n < spilValgte.length ? 'aktiv' : ''}"></span>`
+    ).join("");
+    tæller.innerHTML = prikker;
+  }
+}
+
+function klikDag(i) {
+  const dag = dagData[i];
+
+  // Spil-logik: hvis samme ikon som det første valgte (eller første klik)
+  if (spilValgte.length === 0) {
+    // Første klik starter spillet kun hvis dette ikon optræder 3+ gange
+    const tæl = dagData.filter(d => d.vejr.ikon === dag.vejr.ikon).length;
+    if (tæl >= 3) {
+      spilValgte = [i];
+      valgtIdx = null;
+      document.getElementById("detail-panel").classList.remove("aktiv");
+      renderGrid();
+      return;
+    }
+  } else if (spilValgte.length === 1 || spilValgte.length === 2) {
+    const første = dagData[spilValgte[0]].vejr.ikon;
+    if (dag.vejr.ikon === første && !spilValgte.includes(i)) {
+      spilValgte.push(i);
+      renderGrid();
+      if (spilValgte.length === 3) {
+        setTimeout(visAchievement, 400);
+      }
+      return;
+    } else if (dag.vejr.ikon !== første) {
+      // Forkert ikon – nulstil spil, vis normal detalje
+      spilValgte = [];
+      document.getElementById("spil-tæller").classList.remove("vis");
+    }
+  }
+
+  // Normal klik-adfærd
+  valgtIdx = i;
+  renderGrid();
+  const panel = document.getElementById("detail-panel");
+  panel.classList.add("aktiv");
+  panel.innerHTML = `
+    <div class="detail-top">
+      <div class="detail-ikon">${dag.vejr.ikon}</div>
+      <div>
+        <div class="detail-titel">${dag.vejr.label}</div>
+        <div class="detail-temp">${dag.navn} · ${dag.temp}°C</div>
+      </div>
+    </div>
+    <p class="detail-tekst">${dag.vejr.beskrivelse}</p>
+    <div class="badge-row">${dag.vejr.badges.map(b => `<span class="badge">${b}</span>`).join("")}</div>
+    <button class="luk-btn" onclick="lukPanel()">✕ Luk</button>
+  `;
+  panel.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+let fundneAch = JSON.parse(localStorage.getItem("lv_ach_set") || "[]");
+let achAntal = fundneAch.length;
+
+function opdaterTæller(animate) {
+  const el = document.getElementById("ach-antal");
+  const badge = document.getElementById("ach-tæller");
+  el.textContent = achAntal;
+  if (achAntal === 0) { badge.style.opacity = "0.4"; return; }
+  badge.style.opacity = "1";
+  if (animate) {
+    badge.classList.remove("ny");
+    void badge.offsetWidth;
+    badge.classList.add("ny");
+  }
+}
+
+function visAchievement() {
+  const fundIkon = dagData[spilValgte[0]].vejr.ikon;
+  const pulje = ikonAchievements[fundIkon] || generelleAchievements;
+
+  // Find achievements i puljen som ikke er fundet endnu
+  const ulaaste = pulje.filter(a => !fundneAch.includes(a.titel));
+  const nyFund = ulaaste.length > 0;
+  const a = nyFund
+    ? ulaaste[Math.floor(Math.random() * ulaaste.length)]
+    : pulje[Math.floor(Math.random() * pulje.length)];
+
+  if (nyFund) {
+    fundneAch.push(a.titel);
+    localStorage.setItem("lv_ach_set", JSON.stringify(fundneAch));
+    achAntal = fundneAch.length;
+    opdaterTæller(false);
+  }
+
+  document.getElementById("ach-ikon").textContent = a.ikon;
+  document.getElementById("ach-titel").textContent = a.titel;
+  const ekstra = nyFund
+    ? " (" + achAntal + ". fund 🏅)"
+    : " (allerede fundet – du er god!)";
+  document.getElementById("ach-tekst").textContent = a.tekst + ekstra;
+  document.getElementById("achievement").classList.add("vis");
+
+  if (nyFund && achAntal === 40) {
+    // Episk kanon + auto-reset efter delay
+    startKonfetti('episk');
+    setTimeout(() => {
+      fundneAch = [];
+      achAntal = 0;
+      localStorage.removeItem("lv_ach_set");
+      opdaterTæller(false);
+    }, 8000);
+  } else if (nyFund && achAntal % 5 === 0) {
+    startKonfetti('milestone');
+  } else {
+    startKonfetti('normal');
+  }
+}
+
+function lukAchievement() {
+  document.getElementById("achievement").classList.remove("vis");
+  stopKonfetti();
+  opdaterTæller(true);
+  spilValgte = [];
+  renderGrid();
+}
+
+function lukPanel() {
+  document.getElementById("detail-panel").classList.remove("aktiv");
+  valgtIdx = null;
+  renderGrid();
+}
+
+// --- Konfetti ---
+const canvas = document.getElementById("konfetti-canvas");
+const ctx = canvas.getContext("2d");
+let konfettiParter = [];
+let animId = null;
+
+function startKonfetti(niveau) {
+  // niveau: 'normal' | 'milestone' | 'episk'
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  stopKonfetti();
+
+  const antal = niveau === 'episk' ? 600 : niveau === 'milestone' ? 260 : 120;
+  const farver = niveau === 'episk'
+    ? ["#F5A623","#5BA8E0","#4A9B6F","#E05BA8","#A8E05B","#5BE0C8","#FF4444","#FFD700","#FF69B4","#00CED1","#FF6347","#7B68EE"]
+    : ["#F5A623","#5BA8E0","#4A9B6F","#E05BA8","#A8E05B","#5BE0C8"];
+
+  function lavPartikel(forsinket) {
+    return {
+      x: Math.random() * canvas.width,
+      y: forsinket ? -rand(0, canvas.height * (niveau === 'episk' ? 3 : 1.5)) : Math.random() * -200,
+      w: rand(niveau === 'episk' ? 8 : 6, niveau === 'episk' ? 18 : 14),
+      h: rand(niveau === 'episk' ? 10 : 8, niveau === 'episk' ? 22 : 18),
+      farve: farver[rand(0, farver.length-1)],
+      rot: Math.random() * Math.PI * 2,
+      rotFart: (Math.random()-0.5) * (niveau === 'episk' ? 0.25 : 0.15),
+      fartY: rand(niveau === 'episk' ? 3 : 2, niveau === 'episk' ? 8 : 5),
+      fartX: (Math.random()-0.5) * (niveau === 'episk' ? 4 : 2),
+      form: niveau === 'episk' ? rand(0,2) : 0  // 0=firkant, 1=cirkel, 2=stjerne
+    };
+  }
+
+  konfettiParter = Array.from({length: antal}, (_, i) => lavPartikel(true));
+
+  function tegnStjerne(ctx, cx, cy, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 4 * Math.PI / 5) - Math.PI/2;
+      const b = a + 2 * Math.PI / 5;
+      ctx.lineTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r);
+      ctx.lineTo(cx + Math.cos(b)*r*0.4, cy + Math.sin(b)*r*0.4);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function loop() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    konfettiParter.forEach(p => {
+      p.y += p.fartY; p.x += p.fartX; p.rot += p.rotFart;
+      ctx.save();
+      ctx.translate(p.x + p.w/2, p.y + p.h/2);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.farve;
+      if (p.form === 1) {
+        ctx.beginPath(); ctx.arc(0, 0, p.w/2, 0, Math.PI*2); ctx.fill();
+      } else if (p.form === 2) {
+        tegnStjerne(ctx, 0, 0, p.w/2);
+      } else {
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      }
+      ctx.restore();
+    });
+    konfettiParter = konfettiParter.filter(p => p.y < canvas.height + 40);
+    if (konfettiParter.length > 0) animId = requestAnimationFrame(loop);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+function stopKonfetti() {
+  if (animId) cancelAnimationFrame(animId);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+let fdfKliks = 0;
+let fdfResetTimer = null;
+let fdfKlikTimer = null;
+function fdfKlik() {
+  clearTimeout(fdfKlikTimer);
+  fdfKliks++;
+  if (fdfKliks >= 3) {
+    fdfKliks = 0;
+    document.getElementById("fdf-reset").classList.add("aktiveret");
+    const confirm = document.getElementById("reset-confirm");
+    confirm.classList.add("vis");
+    clearTimeout(fdfResetTimer);
+    fdfResetTimer = setTimeout(() => {
+      confirm.classList.remove("vis");
+      document.getElementById("fdf-reset").classList.remove("aktiveret");
+    }, 4000);
+  } else {
+    fdfKlikTimer = setTimeout(() => { fdfKliks = 0; }, 1500);
+  }
+}
+function resetAchievements() {
+  fundneAch = [];
+  achAntal = 0;
+  localStorage.removeItem("lv_ach_set");
+  opdaterTæller(false);
+  document.getElementById("reset-confirm").classList.remove("vis");
+  document.getElementById("fdf-reset").classList.remove("aktiveret");
+}
+
+genererVejr();
+opdaterTæller(false);
+</script>
+</body>
+</html>
