@@ -416,6 +416,7 @@ function visAchievement() {
     : pulje[Math.floor(Math.random() * pulje.length)];
 
   if (nyFund) {
+    spillPling();
     fundneAch.push(a.titel);
     localStorage.setItem("lv_ach_set", JSON.stringify(fundneAch));
     achAntal = fundneAch.length;
@@ -533,6 +534,47 @@ function startKonfetti(niveau) {
 function stopKonfetti() {
   if (animId) cancelAnimationFrame(animId);
   ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+const plingVarianter = [
+  // Lystig opstigning
+  { type:'sine',   noder:[[523,0.07],[659,0.07],[784,0.07],[1047,0.18]] },
+  // Blød klokke
+  { type:'sine',   noder:[[1047,0.15],[880,0.10],[1047,0.20]] },
+  // Hurtig fanfare
+  { type:'square', noder:[[440,0.05],[554,0.05],[659,0.05],[880,0.12]], vol:0.08 },
+  // Xylofon-hop
+  { type:'sine',   noder:[[784,0.08],[1047,0.08],[784,0.08],[1319,0.20]] },
+  // Dyb bong
+  { type:'sine',   noder:[[220,0.05],[440,0.25]], vol:0.3 },
+  // Tre hurtige pip
+  { type:'square', noder:[[880,0.06],[880,0.06],[1319,0.15]], vol:0.07 },
+  // Faldende stjerne
+  { type:'sine',   noder:[[1319,0.08],[1047,0.08],[784,0.08],[523,0.18]] },
+  // Munter dur-akkord arpeggio
+  { type:'triangle',noder:[[523,0.07],[659,0.07],[784,0.07],[1047,0.07],[1319,0.18]] },
+];
+let plingIdx = 0;
+
+function spillPling() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const v = plingVarianter[plingIdx % plingVarianter.length];
+    plingIdx++;
+    const vol = v.vol || 0.22;
+    let t = ac.currentTime + 0.02;
+    v.noder.forEach(([freq, dur]) => {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type = v.type;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur);
+      t += dur;
+    });
+  } catch(e) {}
 }
 
 function spillRick() {
